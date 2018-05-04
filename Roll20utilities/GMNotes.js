@@ -1,36 +1,62 @@
 /*
 GMNotes
 Prints entire bio or gmnotes from a TOKEN, or specific lines if supply beginning of the line.
-The copanion script, GMNotes, prints from a CHARACTER.
+The companion script, CharNotes, prints from a CHARACTER.
 
-!gmnotes
-!gmnotes-linebeginning
+!gmnote
+!wgmnote
+!gmnote-linebeginning
+!gmnote-linebeginning
 
-
+Script updated here: https://app.roll20.net/forum/permalink/6347021/
 */
-on('ready', function () {
-    'use strict';
+on('ready',()=>{
 
-    const decodeUnicode = (str) => str.replace(/%u[0-9a-fA-F]{2,4}/g, (m) => String.fromCharCode(parseInt(m.slice(2), 16)));
+    const blockElements = [
+        'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ol', 'ul', 'pre', 'address',
+        'blockquote', 'dl', 'div', 'fieldset', 'form', 'hr', 'noscript', 'table','br'
+    ];
+    const rStart=new RegExp(`<\\s*(?:${blockElements.join('|')})\\b[^>]*>`,'ig');
+    const rEnd=new RegExp(`<\\s*\\/\\s*(?:${blockElements.join('|')})\\b[^>]*>`,'ig');
 
-    on('chat:message', function (msg) {
-        if ('api' === msg.type && msg.content.match(/^!gmnote/) && playerIsGM(msg.playerid)) {
-            let match = msg.content.match(/^!gmnote-(.*)$/),
+    const getLines = (str) => 
+        (rStart.test(str)
+            ? str
+                .replace(/[\n\r]+/g,' ')
+                .replace(rStart,'\r$&')
+                .replace(rEnd,'$&\r')
+                .split(/[\n\r]+/)
+            : str
+                .split(/(?:[\n\r]+|<br\/?>)/)
+        )
+            .map((s)=>s.trim())
+            .filter((s)=>s.length)
+            ;
+    const cmdRegex = /^!(w?)gmnote(?:-(.*))?$/i;
+
+    on('chat:message',(msg) => {
+        if('api' === msg.type && cmdRegex.test(msg.content) && playerIsGM(msg.playerid) ){
+            let match=msg.content.match(cmdRegex),
+                output = match[1].length ? '/w gm ' : '',
                 regex;
-            if (match && match[1]) {
-                regex = new RegExp(`^${match[1]}`, 'i');
-            }
 
+            if(match[2]){
+                regex = new RegExp(`^${match[2]}`,'i');
+            }
+                                
             _.chain(msg.selected)
-                .map(s => getObj('graphic', s._id))
+                .map( s => getObj('graphic',s._id))
                 .reject(_.isUndefined)
-                .reject((o) => o.get('gmnotes').length === 0)
-                .each(o => {
-                    if (regex) {
-                        let lines = _.filter(decodeURIComponent(decodeUnicode(o.get('gmnotes'))).split(/(?:[\n\r]+|<br\/?>)/), (l) => regex.test(l)).join('\r');
-                        sendChat(o.get('name'), `/w gm ` + lines);
+                .reject((o)=>o.get('gmnotes').length===0)
+                .each( o => {
+                    if(regex){
+                        let lines = _.filter(
+                            getLines(unescape(o.get('gmnotes'))),
+                            (l) => regex.test(l.replace(/<[^>]*>/g,''))
+                        ).join('<br>');
+                        sendChat(o.get('name'), `${output}${lines}`);
                     } else {
-                        sendChat(o.get('name'), '/w gm &{template:5e-shaped}{{title=' + o.get('name') + '}} {{text=' + decodeURIComponent(decodeUnicode(o.get('gmnotes'))) + '}}');
+                        sendChat(o.get('name'), `${output}${unescape(o.get('gmnotes')).replace(/(?:[\n\r]+|<br\/?>)/g,'<br>')}`);
                     }
                 });
         }
