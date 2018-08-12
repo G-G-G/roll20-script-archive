@@ -1,0 +1,13 @@
+{
+    "name": "HeroDamage",
+    "script": "herodamage.js",
+    "version": "1.0",
+    "previousversions": [],
+    "description": "A Damage interpretation script for HERO System and Champions. This script handles Normal, Killing, and Stun only damage attacks, and supports the defferences between 6th edition and earlier editions, as well as differences between HERO and Supero helevl campaigns (for example, Knockback vs Knockdown). You can have the script roll location, and all standard HERO system location roll methods are incorporated.",
+    "authors": "G G",
+    "roll20userid": "157788",
+    "useroptions": [],
+    "dependencies": [],
+    "modifies": [],
+    "conflicts": []
+}
